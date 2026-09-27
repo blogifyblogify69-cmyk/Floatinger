@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Floatinger</string>
+    <string name="qa_reader_description">Reads visible text from the Floatinger companion Virtual QA Test app for testing and debugging.</string>
+</resources>
