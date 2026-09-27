@@ -1,26 +1,26 @@
 package com.floatinger.demo;
 
 import android.app.Activity;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
+import android.provider.Settings;
 import android.graphics.Color;
 import android.view.Gravity;
-import android.view.View;
 import android.widget.*;
 
 public class MainActivity extends Activity {
-    private final Handler handler = new Handler(Looper.getMainLooper());
-    private TextView timer;
-    private TextView status;
-    private int value = 30;
-    private boolean active = false;
-    private boolean triggeredForCurrent15 = false;
-    private Runnable ticker;
+    public static final String KEY_TARGET_A = "target_a";
+    public static final String KEY_TRIGGER = "trigger";
+    public static final String KEY_DELAY = "delay";
+
+    private EditText targetA;
+    private EditText trigger;
+    private EditText delay;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
-        showHome();
+        showSetup();
     }
 
     private TextView label(String text, int size) {
@@ -28,7 +28,7 @@ public class MainActivity extends Activity {
         v.setText(text);
         v.setTextSize(size);
         v.setTextColor(Color.WHITE);
-        v.setPadding(20, 14, 20, 14);
+        v.setPadding(16, 12, 16, 12);
         return v;
     }
 
@@ -38,168 +38,93 @@ public class MainActivity extends Activity {
         return b;
     }
 
-    private void showHome() {
+    private void showSetup() {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(24, 30, 24, 24);
-        root.setBackgroundColor(Color.rgb(16,17,20));
+        root.setBackgroundColor(Color.rgb(16, 17, 20));
 
         TextView title = label("FLOATINGER", 30);
         title.setGravity(Gravity.CENTER);
         root.addView(title);
 
-        TextView note = label(
-            "Virtual test environment\n\n" +
-            "This demo does not clone or control third-party apps. " +
-            "It provides the same workflow against a built-in test screen.",
-            16);
-        root.addView(note);
+        root.addView(label(
+                "Two-app QA controller prototype\n\n" +
+                "Configure the test rule here, then show the floating controller. " +
+                "The controller communicates only with the built-in Virtual QA Test app.",
+                16));
 
-        Button setup = button("OPEN AUTOMATION SETUP");
-        root.addView(setup);
-        setup.setOnClickListener(v -> showSetup());
+        root.addView(label("Target A value", 15));
+        targetA = new EditText(this);
+        targetA.setText(getPreferences(0).getString(KEY_TARGET_A, "1.50"));
+        targetA.setTextColor(Color.WHITE);
+        targetA.setHintTextColor(Color.GRAY);
+        targetA.setHint("1.50");
+        root.addView(targetA);
 
-        Button demo = button("OPEN TEST SCREEN");
-        root.addView(demo);
-        demo.setOnClickListener(v -> showDemoScreen());
-
-        setContentView(root);
-    }
-
-    private void showSetup() {
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(24, 30, 24, 24);
-        root.setBackgroundColor(Color.rgb(16,17,20));
-
-        root.addView(label("AUTOMATION SETUP", 26));
-        root.addView(label("Trigger timer", 15));
-
-        EditText trigger = new EditText(this);
-        trigger.setHint("15");
+        root.addView(label("Trigger value", 15));
+        trigger = new EditText(this);
+        trigger.setText(getPreferences(0).getString(KEY_TRIGGER, "15"));
         trigger.setInputType(2);
-        trigger.setText("15");
+        trigger.setTextColor(Color.WHITE);
         root.addView(trigger);
 
-        root.addView(label("After trigger: B → wait 22 seconds → A", 16));
+        root.addView(label("Delay after Target B (seconds)", 15));
+        delay = new EditText(this);
+        delay.setText(getPreferences(0).getString(KEY_DELAY, "22"));
+        delay.setInputType(2);
+        delay.setTextColor(Color.WHITE);
+        root.addView(delay);
 
-        Button save = button("SAVE");
+        Button save = button("SAVE SETTINGS");
         root.addView(save);
-        save.setOnClickListener(v -> {
-            Toast.makeText(this, "Saved for virtual test screen", Toast.LENGTH_SHORT).show();
-            showDemoScreen();
+        save.setOnClickListener(v -> saveSettings());
+
+        Button floating = button("SAVE + SHOW FLOATING ICON");
+        root.addView(floating);
+        floating.setOnClickListener(v -> {
+            saveSettings();
+            showFloatingController();
         });
 
-        Button back = button("BACK");
-        root.addView(back);
-        back.setOnClickListener(v -> showHome());
+        Button overlaySettings = button("OPEN OVERLAY PERMISSION");
+        root.addView(overlaySettings);
+        overlaySettings.setOnClickListener(v -> {
+            Intent i = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:" + getPackageName()));
+            startActivity(i);
+        });
 
         setContentView(root);
     }
 
-    private void showDemoScreen() {
-        active = false;
-        triggeredForCurrent15 = false;
-        value = 30;
-
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(12, 20, 12, 12);
-        root.setBackgroundColor(Color.rgb(35, 32, 44));
-
-        TextView header = label("VIRTUAL TEST SCREEN", 20);
-        header.setGravity(Gravity.CENTER);
-        root.addView(header);
-
-        timer = label("30", 72);
-        timer.setGravity(Gravity.CENTER);
-        timer.setBackgroundColor(Color.rgb(30, 70, 90));
-        root.addView(timer, new LinearLayout.LayoutParams(-1, 0, 1));
-
-        status = label("STOPPED", 18);
-        status.setGravity(Gravity.CENTER);
-        root.addView(status);
-
-        LinearLayout targets = new LinearLayout(this);
-        targets.setGravity(Gravity.CENTER);
-        Button a = button("TARGET A");
-        Button b = button("TARGET B");
-        targets.addView(a);
-        targets.addView(b);
-        root.addView(targets);
-
-        LinearLayout controls = new LinearLayout(this);
-        Button activate = button("ACTIVE");
-        Button stop = button("STOP");
-        Button back = button("HOME");
-        controls.addView(activate);
-        controls.addView(stop);
-        controls.addView(back);
-        root.addView(controls);
-
-        activate.setOnClickListener(v -> startAutomation());
-        stop.setOnClickListener(v -> stopAutomation());
-        back.setOnClickListener(v -> { stopAutomation(); showHome(); });
-
-        setContentView(root);
-
-        a.setOnClickListener(v -> status.setText("Target A pressed (demo)"));
-        b.setOnClickListener(v -> status.setText("Target B pressed (demo)"));
-
-        startCountdown(a, b);
+    private void saveSettings() {
+        getPreferences(0).edit()
+                .putString(KEY_TARGET_A, targetA.getText().toString().trim())
+                .putString(KEY_TRIGGER, trigger.getText().toString().trim())
+                .putString(KEY_DELAY, delay.getText().toString().trim())
+                .apply();
+        Toast.makeText(this, "Settings saved", Toast.LENGTH_SHORT).show();
     }
 
-    private void startCountdown(Button a, Button b) {
-        if (ticker != null) handler.removeCallbacks(ticker);
-        ticker = new Runnable() {
-            @Override public void run() {
-                if (value < 1) value = 30;
-                timer.setText(String.valueOf(value));
-                observeTimer(value, a, b);
-                value--;
-                handler.postDelayed(this, 1000);
-            }
-        };
-        handler.post(ticker);
-    }
-
-    private void observeTimer(int current, Button a, Button b) {
-        if (!active) return;
-
-        if (current != 15) {
-            triggeredForCurrent15 = false;
+    private void showFloatingController() {
+        if (!Settings.canDrawOverlays(this)) {
+            Toast.makeText(this,
+                    "Grant 'Display over other apps' permission first.",
+                    Toast.LENGTH_LONG).show();
+            startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:" + getPackageName())));
             return;
         }
 
-        if (triggeredForCurrent15) return;
-        triggeredForCurrent15 = true;
+        Intent service = new Intent(this, FloatingControllerService.class);
+        service.putExtra(KEY_TARGET_A, getPreferences(0).getString(KEY_TARGET_A, "1.50"));
+        service.putExtra(KEY_TRIGGER, getPreferences(0).getString(KEY_TRIGGER, "15"));
+        service.putExtra(KEY_DELAY, getPreferences(0).getString(KEY_DELAY, "22"));
+        startService(service);
 
-        status.setText("15 detected → Target B");
-        b.performClick();
-
-        handler.postDelayed(() -> {
-            if (!active) return;
-            status.setText("22 seconds elapsed → Target A");
-            a.performClick();
-        }, 22_000L);
-    }
-
-    private void startAutomation() {
-        active = true;
-        status.setText("ACTIVE — watching test timer");
-    }
-
-    private void stopAutomation() {
-        active = false;
-        if (ticker != null) {
-            handler.removeCallbacks(ticker);
-            ticker = null;
-        }
-        status.setText("STOPPED");
-    }
-
-    @Override protected void onDestroy() {
-        stopAutomation();
-        super.onDestroy();
+        Toast.makeText(this,
+                "Floating controller is ready. Open the Virtual QA Test app next.",
+                Toast.LENGTH_LONG).show();
     }
 }
