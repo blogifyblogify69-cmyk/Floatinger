@@ -22,6 +22,8 @@ public class FloatingControllerService extends Service {
     private WindowManager windowManager;
     private TextView bubble;
     private LinearLayout menu;
+    private LinearLayout targetBar;
+    private TextView readerStatus;
     private WindowManager.LayoutParams bubbleParams;
     private String targetA = "1.50";
     private String trigger = "15";
@@ -127,12 +129,14 @@ public class FloatingControllerService extends Service {
 
         activeButton.setOnClickListener(v -> {
             active = true;
+            showTargetIndicators();
             sendToTestApp(ACTION_ACTIVE);
             closeMenu();
         });
 
         stopButton.setOnClickListener(v -> {
             active = false;
+            removeTargetIndicators();
             sendToTestApp(ACTION_STOP);
             closeMenu();
         });
@@ -148,6 +152,50 @@ public class FloatingControllerService extends Service {
         p.x = 18;
         p.y = bubbleParams.y + 72;
         windowManager.addView(menu, p);
+    }
+
+    private void showTargetIndicators() {
+        if (targetBar != null || windowManager == null) return;
+        targetBar = new LinearLayout(this);
+        targetBar.setOrientation(LinearLayout.HORIZONTAL);
+        targetBar.setPadding(6, 6, 6, 6);
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(Color.rgb(25, 26, 30));
+        bg.setCornerRadius(22);
+        targetBar.setBackground(bg);
+
+        TextView a = item("A\n" + targetA);
+        TextView b = item("B");
+        TextView reader = item("READ\nQA TEXT");
+        a.setGravity(Gravity.CENTER);
+        b.setGravity(Gravity.CENTER);
+        reader.setGravity(Gravity.CENTER);
+        targetBar.addView(a, new LinearLayout.LayoutParams(88, 70));
+        targetBar.addView(b, new LinearLayout.LayoutParams(72, 70));
+        targetBar.addView(reader, new LinearLayout.LayoutParams(120, 70));
+
+        reader.setOnClickListener(v -> {
+            Intent settings = new Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS);
+            settings.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(settings);
+        });
+
+        WindowManager.LayoutParams p = new WindowManager.LayoutParams(
+                WindowManager.LayoutParams.WRAP_CONTENT, 82,
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                PixelFormat.TRANSLUCENT);
+        p.gravity = Gravity.TOP | Gravity.END;
+        p.x = 18;
+        p.y = bubbleParams.y + 74;
+        windowManager.addView(targetBar, p);
+    }
+
+    private void removeTargetIndicators() {
+        if (targetBar != null && windowManager != null) {
+            windowManager.removeView(targetBar);
+            targetBar = null;
+        }
     }
 
     private TextView item(String text) {
@@ -182,6 +230,7 @@ public class FloatingControllerService extends Service {
 
     @Override public void onDestroy() {
         closeMenu();
+        removeTargetIndicators();
         if (bubble != null && windowManager != null) {
             windowManager.removeView(bubble);
             bubble = null;
