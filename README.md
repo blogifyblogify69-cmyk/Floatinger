@@ -1,35 +1,35 @@
-# Floatinger
+# Floatinger — Two-App QA Controller
 
-Floatinger is a **virtual Android test-environment prototype**.
+Floatinger is the controller APK for a two-APK QA/test prototype.
 
-## Current prototype
+## Workflow
 
-- Built-in test screen with a 30→1 countdown.
-- User-configurable trigger value (default 15).
-- ACTIVE / STOP controls.
-- Target A and Target B demo controls.
-- Deterministic test flow: when the countdown reaches 15, B is triggered once; after 22 seconds, A is triggered.
-- The same visible 15 cannot retrigger until the countdown changes away from 15.
-- No root, no hidden Android APIs, no third-party APK cloning, and no betting/wagering automation.
+1. Open Floatinger.
+2. Set Target A value, trigger value, and delay.
+3. Grant the user-approved Display over other apps capability.
+4. Show the floating F icon.
+5. Open the companion Virtual QA Test APK.
+6. Tap ACTIVE or STOP from the floating controller.
 
-## Important architecture note
+The companion test APK owns its own countdown and test buttons. Floatinger sends only the configured test command to that dedicated QA package.
 
-A normal Android application cannot simply make a transparent, full clone of an arbitrary installed APK inside itself. A real app-container/virtualization product requires a much larger isolation architecture and has compatibility/security limitations.
+## Current capabilities
 
-For external apps, Android AccessibilityService can read accessibility window content and draw overlays, but it must be explicitly enabled by the user. Google Play also has additional disclosure and automation requirements. This prototype therefore keeps the automation inside a controlled test screen.
+- Target A setting (default 1.50)
+- Trigger setting (default 15)
+- Delay setting (default 22 seconds)
+- Floating controller icon
+- ACTIVE / STOP controls
+- Two-app command channel to the dedicated Virtual QA Test APK
+- No root
+- No APK cloning
+- No third-party app inspection
+- No wagering automation
 
-## Planned legal QA architecture
+Android application overlays use SYSTEM_ALERT_WINDOW and require the user to grant the overlay capability in Settings. TYPE_APPLICATION_OVERLAY is the supported overlay window type for regular apps on modern Android.
 
-For an app the developer owns or is authorized to test:
+## Companion project
 
-1. Select the package under test.
-2. Explicitly enable the required Android capability.
-3. Restrict inspection to the selected package.
-4. Read accessible text where available.
-5. Use screenshot/OCR only where the test owner has authorization and the platform permits it.
-6. Show a visible floating controller with ACTIVE / STOP.
-7. Require human-defined deterministic rules.
-8. Stop when the selected app is no longer foreground.
-9. Keep an audit/status view so the user can see what the test system is doing.
+https://github.com/blogifyblogify69-cmyk/Auto-cliker
 
-This repository does **not** implement automatic actions against the betting interface shown in the supplied screenshot.
+This repository is intentionally a test harness rather than a controller for arbitrary installed applications.
